@@ -1,0 +1,37 @@
+[package]
+name = "bnb_sim"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+path = "src/lib.rs"
+name = "bnb_sim"
+
+[[bin]]
+path = "src/bin/server.rs"
+name = "server"
+
+[dependencies]
+env_logger = "0.11"
+anyhow = "1.0"
+
+# Async web stack and json processing
+actix-web = "4.4"
+actix-rt = "2.5"
+tokio = { version = "1.40", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# swagger to document API
+utoipa =  { version = "4.2", features = ["actix_extras"] }
+utoipa-swagger-ui = { version = "7.1", features = ["actix-web"] }
+
+# zero copy abstractions for fast vector processing
+zerocopy = "0.7"
+
+# SQLite, connection pooling and kNN extension
+rusqlite = {  version = "0.32", features = ["bundled"]}
+sqlite-vec = "0.1"
+
+r2d2 = "0.8"
+r2d2_sqlite = "0.25"
