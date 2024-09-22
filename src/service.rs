@@ -1,8 +1,5 @@
 use crate::db::{Database, ListingDetails, SearchResult};
 use anyhow::Result;
-use std::sync::Arc;
-use actix_web::web;
-use tokio::sync::Mutex;
 
 pub struct Service {
     database: Database,
@@ -19,12 +16,12 @@ impl Service {
 
     pub async fn get_listing(&self, id: i64) -> Result<ListingDetails> {
         let db = self.database.clone();
-        web::block(move || db.get_listing_by_id(id)).await?
+        tokio::task::spawn_blocking(move || db.get_listing_by_id(id)).await?
     }
 
     pub async fn search_similar(&self, id: i64, limit: i64) -> Result<Vec<SearchResult>> {
         let db = self.database.clone();
-        web::block(move || db.get_similar_to_listing(id, limit)).await?
+        tokio::task::spawn_blocking(move || db.get_similar_to_listing(id, limit)).await?
     }
 }
 
