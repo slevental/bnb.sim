@@ -10,6 +10,7 @@ use std::result;
 use zerocopy::AsBytes;
 
 
+#[derive(Clone)]
 pub struct Database {
     connection: Pool<SqliteConnectionManager>,
 }

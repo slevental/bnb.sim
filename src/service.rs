@@ -1,30 +1,30 @@
 use crate::db::{Database, ListingDetails, SearchResult};
 use anyhow::Result;
 use std::sync::Arc;
+use actix_web::web;
 use tokio::sync::Mutex;
 
 pub struct Service {
-    database: Arc<Mutex<Database>>,
+    database: Database,
 }
 
 impl Service {
     pub fn from_file(filename: &str) -> Result<Self> {
-        let database = Arc::new(Mutex::new(Database::in_file(filename)?));
-        Ok(Self { database })
+        Ok(Self { database: Database::in_file(filename)? })
     }
 
-    pub async fn get_database(&self) -> Arc<Mutex<Database>> {
+    pub async fn get_database(&self) -> Database {
         self.database.clone()
     }
 
     pub async fn get_listing(&self, id: i64) -> Result<ListingDetails> {
-        let db = self.database.lock().await;
-        db.get_listing_by_id(id)
+        let db = self.database.clone();
+        web::block(move || db.get_listing_by_id(id)).await?
     }
 
     pub async fn search_similar(&self, id: i64, limit: i64) -> Result<Vec<SearchResult>> {
-        let db = self.database.lock().await;
-        db.get_similar_to_listing(id, limit)
+        let db = self.database.clone();
+        web::block(move || db.get_similar_to_listing(id, limit)).await?
     }
 }
 
