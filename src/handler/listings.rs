@@ -31,11 +31,11 @@ pub fn configure(store: Data<Service>) -> impl FnOnce(&mut ServiceConfig) {
 pub struct SearchListing {
     /// Value to search similar to given id
     #[schema(example = 39282)]
-    similar_to: i64,
+    similar_to: u64,
 
     /// Maximum number of results to return
     #[schema(example = 5)]
-    max_results: i64,
+    max_results: u64,
 }
 
 /// Listing's outside representation
@@ -88,7 +88,7 @@ pub enum ErrorResponse {
     )
 )]
 #[get("/listing/{id}")]
-async fn get_listing(id: Path<i64>, store: Data<Service>) -> impl Responder {
+async fn get_listing(id: Path<u64>, store: Data<Service>) -> impl Responder {
     let id = id.into_inner();
     match store.get_listing(id).await {
         Ok(listing) => HttpResponse::Ok().json(Into::<Listing>::into(listing)),

@@ -82,22 +82,27 @@ impl Database {
         Ok(row)
     }
 
-    pub fn get_similar_to_listing(&self, id: i64, limit: i64) -> Result<Vec<SearchResult>> {
+    pub fn get_similar_to_listing(&self, id: u64, limit: u64) -> Result<Vec<SearchResult>> {
         let conn = self.connection.get()?;
         let mut stmt = conn.prepare(
             r"
-            SELECT l.*, vec_distance_cosine(e.embedding,
-                (SELECT embedding FROM embeddings WHERE listing_id = ?)) - 1 AS distance
-            FROM embeddings e, listings l
-            WHERE e.listing_id == l.id AND e.listing_id != ?
-            ORDER BY distance DESC
-            LIMIT ?",
+            WITH search_results AS (
+                SELECT listing_id, distance
+                FROM embeddings_index
+                WHERE embedding MATCH (
+                    SELECT embedding FROM embeddings WHERE listing_id = ?1
+                )
+                ORDER BY distance
+                LIMIT ?2
+            ) SELECT l.*, sr.distance FROM search_results sr, embeddings e, listings l
+                WHERE sr.listing_id == e.rowid AND e.listing_id == l.id",
         )?;
 
-        let rows = stmt.query_map(&[&id, &id, &limit], |row| {
+        let rows = stmt.query_map(&[&id, &limit], |row| {
+            let distance:f64 = row.get(13)?;
             Ok(SearchResult {
                 listing_details: Self::map_row_to_listing(row)?,
-                score: row.get(13)?,
+                score: 1. - distance,
             })
         })?;
 
@@ -108,7 +113,7 @@ impl Database {
         Ok(listings)
     }
 
-    pub fn get_similar_to_embedding(&self, embedding: &Vec<f32>, limit: i64) -> Result<Vec<SearchResult>> {
+    pub fn get_similar_to_embedding(&self, embedding: &Vec<f32>, limit: u64) -> Result<Vec<SearchResult>> {
         let conn = self.connection.get()?;
         let mut stmt = conn.prepare(
             r"
@@ -123,9 +128,10 @@ impl Database {
         )?;
 
         let rows = stmt.query_map((embedding.as_bytes(), limit), |row| {
+            let distance:f64 = row.get(13)?;
             Ok(SearchResult {
                 listing_details: Self::map_row_to_listing(row)?,
-                score: row.get(13)?,
+                score: 1. - distance,
             })
         })?;
 
@@ -136,7 +142,7 @@ impl Database {
         Ok(listings)
     }
 
-    pub fn get_listing_by_id(&self, id: i64) -> Result<ListingDetails> {
+    pub fn get_listing_by_id(&self, id: u64) -> Result<ListingDetails> {
         let conn = self.connection.get()?;
         let row = conn.query_row("SELECT * FROM listings WHERE id = ?",
                                  &[&id],
